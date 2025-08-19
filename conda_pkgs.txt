@@ -1,0 +1,4 @@
+bioconda::star=2.7.11a
+bioconda::subread=2.0.6
+bioconda::samtools=1.20
+bioconda::trust4=1.1.4
