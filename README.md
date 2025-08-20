@@ -236,5 +236,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 If you use Celatlas Spatial in your research, please cite:
 
 ```
-https://github.com/
+[https://github.com/](https://github.com/celatlas/Celatlas_spatial/)
 ```
