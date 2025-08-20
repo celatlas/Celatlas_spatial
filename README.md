@@ -165,8 +165,8 @@ $CELATLAS_WORKSPACE/
 ├── binSegment/           # Segmentation results
 ├── images/               # Input images
 ├── fastq/               # FASTQ files organized by chemistry
-│   ├── BBV2.4
-│   └── strnaV3/
+│   └── BBV2.4/
+│   
 ├── reference/           # Reference genomes
 │   ├── Homo_sapiens/
 │   └── Mus_musculus/
