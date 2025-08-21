@@ -18,7 +18,7 @@ pip install dist/celatlas_spatial-1.6.0-py3-none-any.whl
 # Option 3: From source (for development)
 git clone 
 cd Celatlas_spatial
-pip install -e .
+pip install dist/celatlas_spatial-1.6.0-py3-none-any.whl
 ```
 
 ### Verification
