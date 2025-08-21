@@ -21,7 +21,6 @@ pip install Celatlas_spatial
 # Option 3: From source (for development)
 git clone 
 cd Celatlas_spatial
-
 pip install -e .
 ```
 
