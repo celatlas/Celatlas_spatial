@@ -12,11 +12,16 @@ Celatlas Spatial is a comprehensive spatial transcriptomics analysis pipeline th
 Choose the installation method that best fits your situation:
 
 ```bash
-# Option 1: From distribution package
+# Option 1: Download and unzip the package, then install
+# 1. Download the zip file from the release page
+# 2. Navigate to the directory where you downloaded the file
+# 3. Unzip the file to a folder
+unzip celatlas_spatial-mian.zip
+cd celatlas_spatial-mian
 pip install dist/celatlas_spatial-1.6.0-py3-none-any.whl
 
-# Option 3: From source (for development)
-git clone 
+# Option 2: From source (for development)
+git clone [repository_url]
 cd Celatlas_spatial
 pip install dist/celatlas_spatial-1.6.0-py3-none-any.whl
 ```
