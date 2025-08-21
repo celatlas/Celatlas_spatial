@@ -20,7 +20,7 @@ unzip celatlas_spatial-mian.zip
 cd celatlas_spatial-mian
 pip install dist/celatlas_spatial-1.6.0-py3-none-any.whl
 
-# Option 2: From source (for development)
+# Option 2: git clone
 git clone [repository_url]
 cd Celatlas_spatial
 pip install dist/celatlas_spatial-1.6.0-py3-none-any.whl
