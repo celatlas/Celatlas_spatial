@@ -12,7 +12,7 @@ Celatlas Spatial is a comprehensive spatial transcriptomics analysis pipeline th
 Choose the installation method that best fits your situation:
 
 ```bash
-# Option 1: From distribution package (if available)
+# Option 1: From distribution package
 pip install dist/celatlas_spatial-1.6.0-py3-none-any.whl
 
 # Option 3: From source (for development)
