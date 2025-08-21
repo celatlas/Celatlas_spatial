@@ -15,9 +15,6 @@ Choose the installation method that best fits your situation:
 # Option 1: From distribution package (if available)
 pip install dist/celatlas_spatial-1.6.0-py3-none-any.whl
 
-# Option 2: From PyPI (recommended for most users)
-pip install Celatlas_spatial
-
 # Option 3: From source (for development)
 git clone 
 cd Celatlas_spatial
