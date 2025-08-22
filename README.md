@@ -17,7 +17,7 @@ Choose the installation method that best fits your situation:
 # 2. Navigate to the directory where you downloaded the file
 # 3. Unzip the file to a folder
 unzip celatlas_spatial-1.6.0.zip
-cd celatlas_spatial-mian
+cd celatlas_spatial-1.6.0
 pip install dist/celatlas_spatial-1.6.0-py3-none-any.whl
 
 # Option 2: git clone
