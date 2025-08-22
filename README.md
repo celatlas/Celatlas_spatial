@@ -145,7 +145,7 @@ bash Celatlas.sh Sample001 ST110001 CAS250801 BBV2.4 Mus_musculus image strna
 **Option 2: One-time usage**
 ```bash
 CELATLAS_WORKSPACE="/home/user/workspace" \
-bash Celatlas.sh MySample001 Chip001 CAS250801 strnaV2 human image strna
+bash Celatlas.sh MySample001 ST110001 CAS250801 BBV2.4 human gene_expr strna
 ```
 
 **Option 3: Create a configuration script**
