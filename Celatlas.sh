@@ -44,8 +44,8 @@ fi
 export CELATLAS_SAMPLE_NAME="$sample_name"
 export CELATLAS_CHIP_NUMBER="$chip_number"
 
-# Validate method
-if [[ "$method" != "image" && "$method" != "gene_expr" ]]; then
+# Validate method (skip validation for scRNA mode)
+if [[ "$mode" != "scrna" && "$method" != "image" && "$method" != "gene_expr" ]]; then
     echo "Error: Invalid method specified. Must be 'image' or 'gene_expr'."
     exit 1
 fi
@@ -87,7 +87,10 @@ log_file="${sampledir}/pipeline.log"
 exec > >(tee -a "$log_file") 2>&1
 echo "Starting pipeline at $(date)"
 
-if [[ "$method" == "image" ]]; then
+if [[ "$mode" == "scrna" ]]; then
+    # scRNA mode does not require spatial position files
+    required_files=()
+elif [[ "$method" == "image" ]]; then
     required_files=(
         "${image_dir}/${sample}.tif"
         "${mask_dir}/${sample}.barcodeToPos.h5"
@@ -101,17 +104,20 @@ elif [[ "$method" == "gene_expr" ]]; then
         "${mask_dir}/${sample}_tissue_bbox.csv"
     )
 else
-    echo "Error: Unknown mode: $method. Valid modes are 'image' and 'gene_expr'."
+    echo "Error: Unknown method: $method. Valid methods are 'image' and 'gene_expr'."
     exit 1
 fi
 
-for file in "${required_files[@]}"; do
-    if [[ ! -f "$file" ]]; then
-        echo "Error: Required file not found: $file"
-        exit 1
-    fi
-    cp "$file" "${rawdata_dir}"
-done
+# Copy required files only if not in scRNA mode
+if [[ "$mode" != "scrna" ]]; then
+    for file in "${required_files[@]}"; do
+        if [[ ! -f "$file" ]]; then
+            echo "Error: Required file not found: $file"
+            exit 1
+        fi
+        cp "$file" "${rawdata_dir}"
+    done
+fi
 
 # Set ulimit
 ulimit -n 10240
@@ -174,19 +180,27 @@ run_barcode_step() {
             echo "Found multiple fold files, using multi-file parallel processing with max_parallel=${max_parallel}"
         fi
         
+        # Set whitelist parameter based on mode
+        if [[ "$mode" == "scrna" ]]; then
+            whitelist_param=""  # scRNA mode uses chemistry-based whitelist automatically
+            echo "scRNA mode: Using chemistry-based whitelist for barcode extraction"
+        else
+            whitelist_param="--whitelist ${rawdata_dir}/${sample}.barcodeToPos.h5"
+        fi
+
         # Run barcode command with appropriate parameters
         if [[ "$fold_files_exist" == true ]]; then
             # Multi-file processing with parallelization
             run_command celatlas_spatial rna barcode --outdir "${sampledir}/01.barcode" --sample "${sample}" \
                 --thread "${thread}" --chemistry "${chemistry}" --pattern "${chemistryPattern}" \
-                --whitelist "${rawdata_dir}/${sample}.barcodeToPos.h5" --mode "${mode}" --lowNum 2 --gzip --output_R1 --resume \
+                ${whitelist_param} --mode "${mode}" --lowNum 2 --gzip --output_R1 --resume \
                 --max_parallel_files "${max_parallel}" \
                 --fq1 "${fq1_files}" --fq2 "${fq2_files}"
         else
             # Single file processing (original behavior)
             run_command celatlas_spatial rna barcode --outdir "${sampledir}/01.barcode" --sample "${sample}" \
                 --thread "${thread}" --chemistry "${chemistry}" --pattern "${chemistryPattern}" \
-                --whitelist "${rawdata_dir}/${sample}.barcodeToPos.h5" --mode "${mode}" --lowNum 2 --gzip --output_R1 --resume \
+                ${whitelist_param} --mode "${mode}" --lowNum 2 --gzip --output_R1 --resume \
                 --fq1 "${fq1_files}" --fq2 "${fq2_files}"
         fi
     fi
@@ -277,20 +291,27 @@ run_command celatlas_spatial rna count --outdir "${sampledir}/05.count" --sample
     --thread "${thread}" --genomeDir "${reference_dir}/${Species}" --expected_cell_num "${cell_num}" \
     --cell_calling_method auto --bam "${sampledir}/04.featureCounts/${sample}_nameSorted.bam" --force_cell_num None
 
-# Run method-specific branch
-if [ "$method" == "image" ]; then
-    run_image_branch
-elif [ "$method" == "gene_expr" ]; then
-    run_gene_expr_branch
+# Run mode-specific branch
+if [[ "$mode" == "scrna" ]]; then
+    echo "scRNA mode: Skipping spatial analysis steps (binSegment, spatial analysis, and spatial report)"
+    echo "Pipeline completed successfully at $(date)"
+    echo "scRNA analysis results available in: ${sampledir}"
+else
+    # Run method-specific branch for spatial modes
+    if [ "$method" == "image" ]; then
+        run_image_branch
+    elif [ "$method" == "gene_expr" ]; then
+        run_gene_expr_branch
+    fi
+
+    ## 08.analysis
+    run_command celatlas_spatial rna analysis --outdir "${sampledir}/07.analysis" --sample "${sample}" \
+        --thread "${thread}" --genomeDir "${reference_dir}/${Species}" --square_bin_dir "${sampledir}/06.binSegment/square_bin" \
+        --pixel-size "${pixelSize}" --bin "${bin}"
+
+    ## Generate comprehensive spatial analysis report
+    generate_spatial_report
+
+    echo "Pipeline completed successfully at $(date)"
+    echo "Spatial analysis report available at: ${sampledir}/${sample}_spatial_analysis_report.html"
 fi
-
-## 08.analysis
-run_command celatlas_spatial rna analysis --outdir "${sampledir}/07.analysis" --sample "${sample}" \
-    --thread "${thread}" --genomeDir "${reference_dir}/${Species}" --square_bin_dir "${sampledir}/06.binSegment/square_bin" \
-    --pixel-size "${pixelSize}" --bin "${bin}"
-
-## Generate comprehensive spatial analysis report
-generate_spatial_report
-
-echo "Pipeline completed successfully at $(date)"
-echo "Spatial analysis report available at: ${sampledir}/${sample}_spatial_analysis_report.html"
