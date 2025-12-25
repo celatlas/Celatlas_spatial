@@ -1,0 +1,65 @@
+<script> {% include "./js/jquery.dataTables.min.js" %} </script>
+<script> {% include "./js/dataTables.jqueryui.min.js" %} </script>
+
+<script> {% include "./js/jszip.min.js" %} </script>
+<script> {% include "./js/dataTables.buttons.min.js" %} </script>
+<script> {% include "./js/buttons.flash.min.js" %} </script>
+<script> {% include "./js/buttons.html5.min.js" %} </script>
+<script> {% include "./js/buttons.print.min.js" %} </script>
+
+<style> {% include "./css/jquery-ui.css" %}</style>
+<style> {% include "./css/dataTables.jqueryui.min.css" %}</style>
+<style> {% include "./css/buttons.dataTables.min.css" %}</style>
+
+<div class="abc" style="float: left; margin-left: 15%; margin-right:15%; width: 70%" >
+    <h2>{{ step_summary.display_title}}   <i class="icon-help-circled" onClick="toggle1(this.parentNode.parentNode)" style="cursor:pointer;"></i></h2>
+    <div class="box">
+
+        {% include "html/utils/help_info.html" %}
+
+        <div style="text-align: center;">
+            <div style="display: inline-block; width: 32%;">
+                <h2 class="text-2x; font-semibold mb-4">Spatial Gene Expression Distribution</h2>
+                <img src="data:image/png;base64,{{step_summary.heatmap}}" alt="Heatmap" style="max-width: 100%;">
+            </div>
+            <div style="display: inline-block; width: 32%;">
+                <img src="data:image/png;base64,{{step_summary.spatial_cluster}}" alt="Spatial UMAP" style="max-width: 100%;">
+            </div>
+            <div style="display: inline-block; width: 32%;">
+                <img src="data:image/png;base64,{{step_summary.umap}}" alt="UMAP" style="max-width: 100%;">
+            </div>
+        </div>
+
+        {% if step_summary.scatter is defined and step_summary.violin is defined %}
+            {% for key in step_summary.scatter.keys() %}
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; text-align: left;">{{ key }}</h2>
+                <div style="display: flex; justify-content: center; align-items: flex-start;">
+                    <div style="width: 32%; margin-right: 2%;">
+                        <img src="data:image/png;base64,{{step_summary.scatter[key]}}" alt="Scatter plot for {{key}}" style="max-width: 100%;">
+                    </div>
+                    <div style="width: 64%;">
+                        <img src="data:image/png;base64,{{step_summary.violin[key]}}" alt="Violin plot for {{key}}" style="max-width: 100%;">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>Scatter or violin plots are not available in the data.</p>
+        {% endif %}
+
+        <div style="float: left; margin-left: 3%; margin-top: 1%;margin-right:0%; width: 47%">
+          {{step_summary.tsne_cluster|safe}}        
+        </div>
+      
+        <div style="float: left; margin-left: 3%; margin-top: 1%;margin-right:0%; width: 47%">
+          {{step_summary.tsne_gene|safe}}
+        </div>
+        
+        <hr />
+
+        {% include "html/utils/table_dict.html" %}
+
+    <div class="clear" ></div>
+    </div>
+</div>

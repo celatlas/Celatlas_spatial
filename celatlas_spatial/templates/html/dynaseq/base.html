@@ -1,0 +1,38 @@
+{% include "html/utils/start.html"%}
+
+    {% if star_summary is defined %}
+    {% set step_summary = star_summary %}
+    {% include "html/utils/step.html" %}
+    {% endif %}
+
+    {% if featureCounts_summary is defined%}
+    {% set step_summary = featureCounts_summary %}
+    {% include "html/utils/step.html" %}
+    {% endif %}
+
+    {% if count_summary is defined %}
+    {% set step_summary = count_summary %}
+    {% include "html/rna/count.html"%}
+    {% endif %}
+
+    {% if analysis_summary is defined %}
+    {% set step_summary = analysis_summary %}
+    {% include "html/rna/analysis.html"%}
+    {% endif %}
+
+    {% if substitution_summary is defined %}
+    {% set step_summary = substitution_summary %}
+    {% include "html/dynaseq/substitution.html"%}
+    {% endif %}
+
+    {% if replacement_summary is defined %}
+    {% set step_summary = replacement_summary  %}
+    {% include "html/dynaseq/replacement.html"%}
+    {% endif %}
+
+    {% if replace_tsne_summary is defined %}
+    {% set step_summary = replace_tsne_summary %}
+    {% include "html/dynaseq/replace_tsne.html"%}
+    {% endif %}
+      
+{% include "html/utils/end.html"%}

@@ -1,0 +1,14 @@
+include swin_tiny.pth
+include README.md
+include requirements.txt
+include conda_pkgs.txt
+include Celatlas.sh
+include Celatlas_reanalysis.sh
+recursive-include celatlas_spatial/configs *
+recursive-include celatlas_spatial/templates *
+recursive-include celatlas_spatial/data *
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.egg-info/*
+global-exclude *.backup
+global-exclude *~
