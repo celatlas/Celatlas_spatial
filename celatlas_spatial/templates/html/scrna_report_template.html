@@ -1029,6 +1029,7 @@
             height: 450px;
             position: relative;
             flex-grow: 1;
+            overflow: visible;
         }
 
         .charts-row {
@@ -1261,7 +1262,7 @@
         <div class="sample-info-value">{{TRANSCRIPTOME}}</div>
 
         <div class="sample-info-label">Pipeline Version:</div>
-        <div class="sample-info-value">Celatlas_spatial v1.6.0</div>
+        <div class="sample-info-value">Celatlas_spatial v1.7.0</div>
         <div class="sample-info-label">Image Alignment:</div>
         <div class="sample-info-value">{{IMAGE_ALIGNMENT}}</div>
 
@@ -1437,7 +1438,7 @@
                     <div class="help-content" id="help-sequencing-saturation">
                         <h4>Sequencing Saturation Analysis</h4>
                         <p><strong>Saturation:</strong> The percentage of library complexity captured by sequencing. Higher values indicate more complete transcriptome sampling.<br>
-                        <strong>Square:</strong> Spatial bins (50μm × 50μm) used to analyze tissue regions<br>
+                        <strong>Cell:</strong> Individual cells captured and barcoded during single-cell RNA sequencing<br>
                         <strong>UMI:</strong> Unique Molecular Identifiers - DNA barcodes that tag individual mRNA molecules to reduce PCR duplication bias<br>
                         <strong>Reads:</strong> Sequenced DNA fragments from your sample</p>
                     </div>
@@ -1511,7 +1512,7 @@
             <div class="charts-row">
                 <div class="chart-card">
                     <div class="chart-header">
-                        <div class="sample-info-title">Median Genes per Square</div>
+                        <div class="sample-info-title">Median Genes per Cell</div>
                         <div class="chart-actions">
                             <div class="chart-btn" id="resetMedianGenes" title="Reset View"><i class="fas fa-expand"></i></div>
                             <div class="chart-btn" id="downloadMedianGenes" title="Download PNG"><i class="fas fa-download"></i></div>
@@ -1520,7 +1521,7 @@
                     <div class="chart-container" id="medianGenesContainer">
                         {{MEDIAN_GENES_PLOT_HTML}}
                     </div>
-                    <div class="chart-info">Shows how median genes per Square changes with increasing sequencing depth</div>
+                    <div class="chart-info">Shows how median genes per cell changes with increasing sequencing depth</div>
                 </div>
 
                 <div class="chart-card">
@@ -2038,9 +2039,9 @@
                 });
                 
                 setupPlotlyChart('barcodeRankContainer', 'resetBarcodeRank', 'downloadBarcodeRank', {
-                    smoothCurves: true,
+                    smoothCurves: false,  // Don't modify - Python has set everything correctly
                     yAxisFixed: false,
-                    removeBackground: true
+                    removeBackground: false
                 });
             } else {
                 // Retry after a short delay if Plotly isn't loaded yet

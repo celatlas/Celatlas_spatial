@@ -1057,6 +1057,7 @@
             height: 450px;
             position: relative;
             flex-grow: 1;
+            overflow: visible;
         }
 
         .charts-row {
@@ -1618,7 +1619,7 @@
         <div class="sample-info-value">{{TRANSCRIPTOME}}</div>
 
         <div class="sample-info-label">Pipeline Version:</div>
-        <div class="sample-info-value">Celatlas_spatial v1.6.0</div>
+        <div class="sample-info-value">Celatlas_spatial v1.7.0</div>
         <div class="sample-info-label">Image Alignment:</div>
         <div class="sample-info-value">{{IMAGE_ALIGNMENT}}</div>
 
@@ -2529,9 +2530,9 @@
                 });
                 
                 setupPlotlyChart('barcodeRankContainer', 'resetBarcodeRank', 'downloadBarcodeRank', {
-                    smoothCurves: true,
+                    smoothCurves: false,  // Don't modify - Python has set everything correctly
                     yAxisFixed: false,
-                    removeBackground: true
+                    removeBackground: false
                 });
             } else {
                 // Retry after a short delay if Plotly isn't loaded yet

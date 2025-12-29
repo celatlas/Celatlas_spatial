@@ -465,11 +465,30 @@ class ScRNAReportGenerator:
             self.downsample_data = None
     
     def load_count_detail_data(self):
-        """Load count detail data for barcode rank plot.
+        """Load barcode UMI count data for barcode rank plot.
 
-        Uses chunked reading to calculate barcode UMI counts from the complete dataset
-        without loading all data into memory at once.
+        First tries to use the aggregated counts.txt file (faster and includes all barcodes).
+        Falls back to count_detail.txt if counts.txt is not available.
         """
+        # Try the aggregated counts file first (preferred method)
+        counts_file = self.sample_dir / "05.count" / f"{self.sample_name}_counts.txt"
+
+        if counts_file.exists():
+            try:
+                self.logger.info(f"Loading barcode counts from {counts_file}")
+                # Read the counts file which has all barcodes with their UMI counts
+                counts_df = pd.read_csv(counts_file, sep='\t', index_col=0)
+                # Sort by UMI count (descending)
+                counts_df = counts_df.sort_values('UMI', ascending=False)
+                self.barcode_umi_counts = counts_df['UMI']
+
+                self.logger.info(f"Loaded barcode counts: {len(self.barcode_umi_counts):,} barcodes, "
+                               f"min UMI={self.barcode_umi_counts.min()}, max UMI={self.barcode_umi_counts.max()}")
+                return
+            except Exception as e:
+                self.logger.error(f"Failed to load counts file: {e}, falling back to count_detail")
+
+        # Fallback: read count_detail file
         count_detail_file = self.sample_dir / "05.count" / f"{self.sample_name}_count_detail.txt"
 
         if count_detail_file.exists():
@@ -509,84 +528,114 @@ class ScRNAReportGenerator:
             self.barcode_umi_counts = None
     
     def generate_barcode_rank_plot(self, include_plotlyjs='inline') -> str:
-        """Generate interactive Barcode Rank Plot using plotly."""
+        """Generate interactive Barcode Rank Plot using plotly (Cell Ranger style)."""
         if not PLOTLY_AVAILABLE:
             return '<div class="simple-chart"><div class="chart-placeholder">Plotly not available</div></div>'
-        
+
         try:
             if self.barcode_umi_counts is None:
                 # Generate sample data if real data not available
                 n_barcodes = 10000
                 x_data = np.arange(1, n_barcodes + 1)
-
-                # Generate realistic barcode UMI counts (exponential decay)
                 barcode_counts = np.exp(-x_data / 2000) * 1000 + np.random.exponential(10, n_barcodes)
-                background_counts = np.ones(n_barcodes) * 5 + np.random.exponential(2, n_barcodes)
-
                 self.logger.warning("Using simulated data for Barcode Rank Plot")
             else:
-                # Use pre-calculated barcode UMI counts (already sorted in descending order)
-                # For scRNA-seq, show more barcodes to better visualize cell population
-                n_barcodes = min(len(self.barcode_umi_counts), 50000)  # Increased from 20k to 50k for scRNA
+                # Use all available data
+                total_barcodes = len(self.barcode_umi_counts)
+                x_data = np.arange(1, total_barcodes + 1)
+                barcode_counts = self.barcode_umi_counts.values
 
-                x_data = np.arange(1, n_barcodes + 1)
-                barcode_counts = self.barcode_umi_counts.head(n_barcodes).values
+                self.logger.info(f"Barcode Rank Plot data: {total_barcodes} barcodes, "
+                               f"min UMI={barcode_counts[-1]}, max UMI={barcode_counts[0]}")
 
-                # Estimate background as lower percentile (more conservative for scRNA)
-                background_level = np.percentile(barcode_counts, 5)  # Changed from 10 to 5
-                background_counts = np.ones(n_barcodes) * background_level
-            
+            # Use Estimated Number of Cells as the split point
+            # This ensures the blue/gray split matches the reported cell count
+            estimated_cells = self.general_stats.get('Estimated Number of Cells', None)
+
+            if estimated_cells is not None:
+                try:
+                    # Remove commas if present and convert to int
+                    if isinstance(estimated_cells, str):
+                        estimated_cells = int(estimated_cells.replace(',', ''))
+                    else:
+                        estimated_cells = int(estimated_cells)
+                    inflection_idx = min(estimated_cells, len(x_data))
+                    self.logger.info(f"Using Estimated Number of Cells ({estimated_cells}) as split point")
+                except (ValueError, AttributeError):
+                    self.logger.warning(f"Could not parse Estimated Number of Cells: {estimated_cells}, using auto-detection")
+                    estimated_cells = None
+
+            # Fallback: auto-detect inflection point if Estimated Number of Cells not available
+            if estimated_cells is None:
+                log_counts = np.log10(barcode_counts + 1)
+                if len(log_counts) > 100:
+                    gradient = np.gradient(log_counts)
+                    second_deriv = np.gradient(gradient)
+                    inflection_idx = np.argmin(second_deriv[:len(second_deriv)//2])
+                    inflection_idx = max(inflection_idx, 10)
+                else:
+                    inflection_idx = int(len(x_data) * 0.1)
+                self.logger.info(f"Auto-detected inflection point at {inflection_idx}")
+
+            # Display all barcodes to show complete background curve
+            # No need to trim data - show everything for complete visualization
+            display_range = len(x_data)
+
+            self.logger.info(f"Barcode Rank Plot: split at {inflection_idx}, displaying {display_range} barcodes (all data)")
+
+            # Use all data - no trimming
+            # x_data and barcode_counts remain unchanged
+
+            # Split data into cells (blue) and background (gray)
+            # Include inflection point in both traces to ensure continuous line
+            cell_x = x_data[:inflection_idx + 1]  # Include inflection_idx
+            cell_y = barcode_counts[:inflection_idx + 1]
+            bg_x = x_data[inflection_idx:]  # Start from inflection_idx
+            bg_y = barcode_counts[inflection_idx:]
+
             # Create the plot
             fig = go.Figure()
-            
-            # Add barcode trace
+
+            # Add cells trace (blue)
             fig.add_trace(go.Scatter(
-                x=x_data,
-                y=barcode_counts,
+                x=cell_x,
+                y=cell_y,
                 mode='lines',
-                name='Barcode',
-                line=dict(color='#1a73e8', width=2),
+                name='Cells',
+                line=dict(color='#1a73e8', width=3),
+                hovertemplate='<b>Rank:</b> %{x}<br><b>UMI Counts:</b> %{y}<extra></extra>'
+            ))
+
+            # Add background trace (gray)
+            fig.add_trace(go.Scatter(
+                x=bg_x,
+                y=bg_y,
+                mode='lines',
+                name='Background',
+                line=dict(color='#9ca3af', width=3),
                 hovertemplate='<b>Rank:</b> %{x}<br><b>UMI Counts:</b> %{y}<extra></extra>'
             ))
             
-            # Add background trace
-            fig.add_trace(go.Scatter(
-                x=x_data,
-                y=background_counts,
-                mode='lines',
-                name='Background',
-                line=dict(color='#94a3b8', width=2, dash='dash'),
-                hovertemplate='<b>Rank:</b> %{x}<br><b>Background:</b> %{y}<extra></extra>'
-            ))
+            # X-axis tick labels: Always show 1, 100, 10k, 1M
+            x_max = max(x_data)
+            x_tickvals = [1, 100, 10000, 1000000]
+            x_ticktext = ['1', '100', '10k', '1M']
 
-            # Add cell threshold line if barcode data is available
-            if self.barcode_umi_counts is not None:
-                # Find inflection point (cell vs background threshold)
-                # Simple heuristic: find the steepest drop in log-log space
-                log_counts = np.log10(barcode_counts + 1)
-                if len(log_counts) > 100:
-                    # Calculate second derivative to find inflection
-                    gradient = np.gradient(log_counts)
-                    second_deriv = np.gradient(gradient)
-                    # Find the point with maximum curvature (most negative second derivative)
-                    inflection_idx = np.argmin(second_deriv[:len(second_deriv)//2])  # Only check first half
-                    inflection_idx = max(inflection_idx, 10)  # Ensure at least 10 cells
+            # Set X-axis range to show full scale
+            x_range = [np.log10(1), np.log10(max(1000000, x_max))]
 
-                    cell_threshold_rank = x_data[inflection_idx]
-                    cell_threshold_umi = barcode_counts[inflection_idx]
+            # Y-axis tick labels: Always show 1, 10, 100, 1000, 10K
+            y_min = min(barcode_counts)
+            y_max = max(barcode_counts)
+            y_tickvals = [1, 10, 100, 1000, 10000]
+            y_ticktext = ['1', '10', '100', '1000', '10k']
 
-                    # Add vertical line at cell threshold
-                    fig.add_vline(
-                        x=cell_threshold_rank,
-                        line=dict(color='#ef4444', width=2, dash='dot'),
-                        annotation=dict(
-                            text=f'Cell Threshold<br>(~{cell_threshold_rank:,} cells)',
-                            font=dict(size=10, color='#ef4444'),
-                            xanchor='left'
-                        )
-                    )
-            
-            # Update layout to match UI theme
+            # Set Y-axis range to show ALL data including background
+            y_lower = max(0.1, y_min * 0.8)  # Start from data minimum (at least 0.1), with 20% buffer
+            y_upper = max(10000, y_max * 1.2)  # At least show to 10k, or 20% above max data
+            y_range = [np.log10(y_lower), np.log10(y_upper)]
+
+            # Update layout to match UI theme with Cell Ranger style ticks
             fig.update_layout(
                 title=dict(
                     text='Barcode Rank Plot',
@@ -601,7 +650,9 @@ class ScRNAReportGenerator:
                     color='#000000',
                     linecolor='#000000',
                     linewidth=2,
-                    exponentformat='none'
+                    tickvals=x_tickvals,
+                    ticktext=x_ticktext,
+                    range=x_range
                 ),
                 yaxis=dict(
                     title='UMI Counts',
@@ -610,25 +661,36 @@ class ScRNAReportGenerator:
                     gridcolor='#e2e8f0',
                     color='#000000',
                     linewidth=2,
-                    linecolor='#000000'     
+                    linecolor='#000000',
+                    tickvals=y_tickvals,
+                    ticktext=y_ticktext,
+                    range=y_range
                 ),
                 plot_bgcolor='white',
                 paper_bgcolor='white',
                 font=dict(family='Arial', size=12),
                 legend=dict(
                     x=0.7, y=0.95,
-                    bgcolor='rgba(255,255,255,0.8)',
+                    bgcolor='white',  # Pure white background
                     bordercolor='#e2e8f0',
                     borderwidth=1
                 ),
-                margin=dict(l=60, r=20, t=60, b=60),
-                height=450
+                margin=dict(l=60, r=80, t=60, b=60),
+                height=450,
+                autosize=True
             )
-            
+
             # Convert to HTML with optimized plotly.js inclusion
-            config = {'displayModeBar': False, 'responsive': True}
+            # Set responsive to True and ensure plot fills container properly without clipping
+            config = {
+                'displayModeBar': False,
+                'responsive': True,
+                'autosizable': True,
+                'fillFrame': False,
+                'frameMargins': 0
+            }
             html_str = pyo.plot(fig, output_type='div', include_plotlyjs=include_plotlyjs, config=config)
-            
+
             self.logger.info("Generated Barcode Rank Plot successfully")
             return html_str
             
@@ -716,7 +778,7 @@ class ScRNAReportGenerator:
             return '<div class="simple-chart"><div class="chart-placeholder">Sequencing Saturation<br><small>Error generating chart</small></div></div>'
     
     def generate_median_genes_plot(self, include_plotlyjs=False) -> str:
-        """Generate interactive Median Genes per Square plot using plotly."""
+        """Generate interactive Median Genes per Cell plot using plotly."""
         if not PLOTLY_AVAILABLE:
             return '<div class="simple-chart"><div class="chart-placeholder">Plotly not available</div></div>'
         
@@ -743,7 +805,7 @@ class ScRNAReportGenerator:
                 x=read_fractions,
                 y=median_genes,
                 mode='lines',
-                name='Median Genes per Square',
+                name='Median Genes per Cell',
                 line=dict(color='#e84545', width=3),
                 hovertemplate='<b>Read Fraction:</b> %{x:.2f}<br><b>Median Genes:</b> %{y:.0f}<extra></extra>'
             ))
@@ -751,7 +813,7 @@ class ScRNAReportGenerator:
             # Update layout
             fig.update_layout(
                 title=dict(
-                    text='Median Genes per Square',
+                    text='Median Genes per Cell',
                     font=dict(size=16, color='#1a73e8'),
                     x=0.5
                 ),
@@ -765,7 +827,7 @@ class ScRNAReportGenerator:
                     range=[0, 1]
                 ),
                 yaxis=dict(
-                    title='Median Genes per Square',
+                    title='Median Genes per Cell',
                     showgrid=True,
                     gridcolor='#e2e8f0',
                     color='#000000',
@@ -789,7 +851,7 @@ class ScRNAReportGenerator:
             
         except Exception as e:
             self.logger.error(f"Failed to generate Median Genes Plot: {e}")
-            return '<div class="simple-chart"><div class="chart-placeholder">Median Genes per Square<br><small>Error generating chart</small></div></div>'
+            return '<div class="simple-chart"><div class="chart-placeholder">Median Genes per Cell<br><small>Error generating chart</small></div></div>'
     
     def generate_static_chart_placeholder(self, title: str, subtitle: str) -> str:
         """Generate a lightweight static chart placeholder for faster loading."""
@@ -1254,7 +1316,7 @@ class ScRNAReportGenerator:
             # New Sample Metadata parameters
             'CHIP_NUMBER': self.env_chip_number if self.env_chip_number else 'N/A',
             'TRANSCRIPTOME': transcriptome,
-            'IMAGE_ALIGNMENT': 'ssDNA',
+            'IMAGE_ALIGNMENT': 'N/A',  # scRNA-seq doesn't have spatial image alignment
             'PROBE_SET_NAME': 'N/A',
             'FILTER_PROBES': 'N/A',
         }
@@ -1444,7 +1506,7 @@ class ScRNAReportGenerator:
             # Static charts for faster loading
             self.barcode_rank_plot_html = self.generate_static_chart_placeholder("Barcode Rank Plot", "UMI Counts vs Barcodes")
             self.sequencing_saturation_plot_html = self.generate_static_chart_placeholder("Sequencing Saturation", "Read fraction vs Sequencing saturation%")
-            self.median_genes_plot_html = self.generate_static_chart_placeholder("Median Genes per Square", "Sequencing Depth Analysis")
+            self.median_genes_plot_html = self.generate_static_chart_placeholder("Median Genes per Cell", "Sequencing Depth Analysis")
         
         # Load and populate template
         template = self.load_template()
