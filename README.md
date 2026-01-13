@@ -301,7 +301,7 @@ bash Celatlas.sh DEMO ST110001_A1 ssDNA_test BBV2.4 Homo_sapiens ssDNA strna \
 #### Example 6: scRNA-seq Mode
 ```bash
 # Single-cell RNA-seq analysis (no spatial information)
-bash Celatlas.sh DEMO ST110001_A1 scrna_test BBV2.4 Homo_sapiens gene_expr scrna
+bash Celatlas.sh DEMO ST110001_A1 scrna_test BBV0 Homo_sapiens gene_expr scrna
 ```
 
 #### Example 7: Full Custom Configuration
