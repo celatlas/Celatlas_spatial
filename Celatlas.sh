@@ -67,6 +67,11 @@ chemistry=""
 Species=""
 method=""
 mode=""
+reference_dir=""  # New: custom reference directory
+mask_dir=""       # New: custom mask directory
+image_dir=""      # New: custom image directory
+fastq_dir=""      # New: custom FASTQ directory
+fastq_name=""     # New: custom FASTQ filename prefix
 
 # Default optional parameters (will be set later if not provided)
 OPT_THREAD=""
@@ -138,6 +143,27 @@ OPTIONAL PARAMETERS:
   --pixelSize <µm>              Pixel size in micrometers
                                   Default: 0.5
 
+PATH CUSTOMIZATION (Advanced):
+  --reference_dir <path>        Custom reference genome directory
+                                  Default: $WORKSPACE/reference
+                                  Useful for shared reference across projects
+
+  --mask_dir <path>             Custom mask/barcode directory
+                                  Default: $WORKSPACE/ST_mask
+                                  Directory containing .barcodeToPos.h5 files
+
+  --image_dir <path>            Custom image directory
+                                  Default: $WORKSPACE/images
+                                  Directory containing H&E or ssDNA images
+
+  --fastq_dir <path>            Custom FASTQ directory
+                                  Default: $WORKSPACE/fastq/$chemistry
+                                  Avoids duplicate data copies
+
+  --fastq_name <prefix>         Custom FASTQ filename prefix
+                                  Default: chip_number
+                                  Use when FASTQ names differ from chip number
+
 EXAMPLES:
   # Example 1: Basic usage with defaults
   ./Celatlas.sh DEMO ST110250_A1 HE_test BBV2.4 Mus_musculus HE strna
@@ -165,6 +191,15 @@ EXAMPLES:
   ./Celatlas.sh --sample DEMO --chip ST110250_A1 --casno batch_001 \
                 --chemistry BBV2.4 --species Mus_musculus --method HE \
                 --mode strna --thread 32 --bin 50,100
+
+  # Example 8: Custom directories for shared data environment
+  ./Celatlas.sh --chip ST110250_A1 --casno shared_001 \
+                --chemistry BBV2.4 --species Mus_musculus --method HE \
+                --mode strna \
+                --reference_dir /data/shared/reference \
+                --fastq_dir /data/sequencing/run001 \
+                --mask_dir /data/shared/masks \
+                --image_dir /data/shared/images
 
 OUTPUT LOCATION:
   Results will be saved to:
@@ -225,6 +260,26 @@ EOF
             mode="$2"
             shift 2
             ;;
+        --reference_dir)
+            reference_dir="$2"
+            shift 2
+            ;;
+        --mask_dir)
+            mask_dir="$2"
+            shift 2
+            ;;
+        --image_dir)
+            image_dir="$2"
+            shift 2
+            ;;
+        --fastq_dir)
+            fastq_dir="$2"
+            shift 2
+            ;;
+        --fastq_name)
+            fastq_name="$2"
+            shift 2
+            ;;
         --thread|-t)
             OPT_THREAD="$2"
             shift 2
@@ -258,7 +313,8 @@ EOF
 done
 
 # Handle positional arguments if provided
-if [ ${#positional_args[@]} -eq 7 ]; then
+if [ ${#positional_args[@]} -eq 12 ]; then
+    # Full mode: all parameters including custom directories
     sample_name="${positional_args[0]}"
     chip_number="${positional_args[1]}"
     casno="${positional_args[2]}"
@@ -266,7 +322,41 @@ if [ ${#positional_args[@]} -eq 7 ]; then
     Species="${positional_args[4]}"
     method="${positional_args[5]}"
     mode="${positional_args[6]}"
+    reference_dir="${positional_args[7]}"
+    mask_dir="${positional_args[8]}"
+    image_dir="${positional_args[9]}"
+    fastq_dir="${positional_args[10]}"
+    fastq_name="${positional_args[11]}"
+elif [ ${#positional_args[@]} -eq 11 ]; then
+    # No image_dir specified (for gene_expr mode)
+    sample_name="${positional_args[0]}"
+    chip_number="${positional_args[1]}"
+    casno="${positional_args[2]}"
+    chemistry="${positional_args[3]}"
+    Species="${positional_args[4]}"
+    method="${positional_args[5]}"
+    mode="${positional_args[6]}"
+    reference_dir="${positional_args[7]}"
+    mask_dir="${positional_args[8]}"
+    image_dir=""
+    fastq_dir="${positional_args[9]}"
+    fastq_name="${positional_args[10]}"
+elif [ ${#positional_args[@]} -eq 7 ]; then
+    # Standard mode with sample_name
+    sample_name="${positional_args[0]}"
+    chip_number="${positional_args[1]}"
+    casno="${positional_args[2]}"
+    chemistry="${positional_args[3]}"
+    Species="${positional_args[4]}"
+    method="${positional_args[5]}"
+    mode="${positional_args[6]}"
+    reference_dir=""
+    mask_dir=""
+    image_dir=""
+    fastq_dir=""
+    fastq_name=""
 elif [ ${#positional_args[@]} -eq 6 ]; then
+    # Legacy mode without sample_name
     sample_name=""
     chip_number="${positional_args[0]}"
     casno="${positional_args[1]}"
@@ -274,9 +364,14 @@ elif [ ${#positional_args[@]} -eq 6 ]; then
     Species="${positional_args[3]}"
     method="${positional_args[4]}"
     mode="${positional_args[5]}"
+    reference_dir=""
+    mask_dir=""
+    image_dir=""
+    fastq_dir=""
+    fastq_name=""
 elif [ ${#positional_args[@]} -gt 0 ]; then
     echo "Error: Invalid number of positional arguments (${#positional_args[@]})"
-    echo "Expected 6 or 7 positional arguments, or use named arguments"
+    echo "Expected 6, 7, 11, or 12 positional arguments, or use named arguments"
     echo "Run '$0 --help' for usage information"
     exit 1
 fi
@@ -367,6 +462,41 @@ feature_type="gene"
 chemistryPattern="C4L15C4L15C4U10T18"
 MAX_PARALLEL_FILES=${MAX_PARALLEL_FILES:-3}
 
+# Paths - set defaults if not provided by user
+workspace_dir=${CELATLAS_WORKSPACE:-/mnt/strna/celatlas_spatial}
+segImageDir="${workspace_dir}/binSegment/${sample}"
+
+# Apply defaults for custom directories if not specified
+if [[ -z "$reference_dir" ]]; then
+  reference_dir="${workspace_dir}/reference"
+  echo "Note: Using default reference directory: $reference_dir"
+fi
+
+if [[ -z "$mask_dir" ]]; then
+  mask_dir="${workspace_dir}/ST_mask"
+  echo "Note: Using default mask directory: $mask_dir"
+fi
+
+if [[ -z "$image_dir" ]]; then
+  image_dir="${workspace_dir}/images"
+  echo "Note: Using default image directory: $image_dir"
+fi
+
+if [[ -z "$fastq_dir" ]]; then
+  fastq_dir="${workspace_dir}/fastq/$chemistry"
+  echo "Note: Using default FASTQ directory: $fastq_dir"
+fi
+
+if [[ -z "$fastq_name" ]]; then
+  fastq_name="$sample"
+  echo "Note: FASTQ name not provided, using chip number: $fastq_name"
+fi
+
+src_dir="${workspace_dir}/src"
+rawdata_dir="${workspace_dir}/rawdata/$sample"
+sampledir="${workspace_dir}/results/${casno}/${sample}"
+genomeDir="${reference_dir}/${Species}"
+
 # Display configuration
 echo "==============================================="
 echo "Celatlas Spatial Pipeline Configuration"
@@ -379,6 +509,12 @@ echo "Species:          $Species"
 echo "Method:           $method"
 echo "Mode:             $mode"
 echo "-----------------------------------------------"
+echo "Reference Dir:    $reference_dir"
+echo "Mask Dir:         $mask_dir"
+echo "Image Dir:        $image_dir"
+echo "FASTQ Dir:        $fastq_dir"
+echo "FASTQ Name:       $fastq_name"
+echo "-----------------------------------------------"
 echo "Thread Count:     $thread"
 echo "Bin Sizes:        $bin"
 echo "Insert R2:        $insertR2 bp"
@@ -386,24 +522,12 @@ echo "Pixel Size:       $pixelSize µm"
 echo "Expected Cells:   $cell_num"
 echo "==============================================="
 
-# Paths
-workspace_dir=${CELATLAS_WORKSPACE:-/mnt/strna/celatlas_spatial}
-segImageDir="${workspace_dir}/binSegment/${sample}"
-image_dir="${workspace_dir}/images"
-fastq_dir="${workspace_dir}/fastq/$chemistry"
-mask_dir="${workspace_dir}/ST_mask"
-reference_dir="${workspace_dir}/reference"
-src_dir="${workspace_dir}/src"
-rawdata_dir="${workspace_dir}/rawdata/$sample"
-sampledir="${workspace_dir}/results/${casno}/${sample}"
-genomeDir="${reference_dir}/${Species}"
-
 # Prepare & Log
 mkdir -p "${rawdata_dir}" "${sampledir}/01.barcode" "${sampledir}"
 log_file="${sampledir}/pipeline.log"
 exec > >(tee -a "$log_file") 2>&1
 echo "Starting pipeline at $(date)"
-echo "sample=${sample} casno=${casno} chemistry=${chemistry} Species=${Species} method=${method} mode=${mode} threads=${thread}"
+echo "sample=${sample} casno=${casno} chemistry=${chemistry} Species=${Species} method=${method} mode=${mode} threads=${thread} reference_dir=${reference_dir} mask_dir=${mask_dir} image_dir=${image_dir} fastq_dir=${fastq_dir} fastq_name=${fastq_name}"
 
 # Validation and file preparation
 echo ""
@@ -502,13 +626,13 @@ fq2_files=""
 files_found=false
 sample_fq1=""
 
-echo "Detecting FASTQ files for sample ${sample}..."
+echo "Detecting FASTQ files for FASTQ name: ${fastq_name}..."
 
 # Priority 1: Check for multi-lane sequencing format (recommended)
-# Pattern: ${sample}_S*_L*_R1_*.fastq.gz
+# Pattern: ${fastq_name}_S*_L*_R1_*.fastq.gz
 shopt -s nullglob
-tenx_r1_files=( "${fastq_dir}/${sample}"_S*_L*_R1_*.fastq.gz "${fastq_dir}/${sample}"_S*_L*_R1_*.fq.gz )
-tenx_r2_files=( "${fastq_dir}/${sample}"_S*_L*_R2_*.fastq.gz "${fastq_dir}/${sample}"_S*_L*_R2_*.fq.gz )
+tenx_r1_files=( "${fastq_dir}/${fastq_name}"_S*_L*_R1_*.fastq.gz "${fastq_dir}/${fastq_name}"_S*_L*_R1_*.fq.gz )
+tenx_r2_files=( "${fastq_dir}/${fastq_name}"_S*_L*_R2_*.fastq.gz "${fastq_dir}/${fastq_name}"_S*_L*_R2_*.fq.gz )
 shopt -u nullglob
 
 if [[ ${#tenx_r1_files[@]} -gt 0 && ${#tenx_r2_files[@]} -gt 0 ]]; then
@@ -530,16 +654,16 @@ if [[ ${#tenx_r1_files[@]} -gt 0 && ${#tenx_r2_files[@]} -gt 0 ]]; then
 fi
 
 # Priority 2: Check for fold files (legacy format)
-# Pattern: ${sample}_fold1_1.fq.gz, ${sample}_fold2_1.fq.gz, ...
+# Pattern: ${fastq_name}_fold1_1.fq.gz, ${fastq_name}_fold2_1.fq.gz, ...
 if [[ "$files_found" == false ]]; then
   for fold in fold1 fold2 fold3 fold4 fold5; do
-    if [[ -f "${fastq_dir}/${sample}_${fold}_1.fq.gz" && -f "${fastq_dir}/${sample}_${fold}_2.fq.gz" ]]; then
-      fq1_files="${fq1_files:+${fq1_files},}${fastq_dir}/${sample}_${fold}_1.fq.gz"
-      fq2_files="${fq2_files:+${fq2_files},}${fastq_dir}/${sample}_${fold}_2.fq.gz"
+    if [[ -f "${fastq_dir}/${fastq_name}_${fold}_1.fq.gz" && -f "${fastq_dir}/${fastq_name}_${fold}_2.fq.gz" ]]; then
+      fq1_files="${fq1_files:+${fq1_files},}${fastq_dir}/${fastq_name}_${fold}_1.fq.gz"
+      fq2_files="${fq2_files:+${fq2_files},}${fastq_dir}/${fastq_name}_${fold}_2.fq.gz"
       files_found=true
       # Use first fold file for sample step
       if [[ -z "$sample_fq1" ]]; then
-        sample_fq1="${fastq_dir}/${sample}_${fold}_1.fq.gz"
+        sample_fq1="${fastq_dir}/${fastq_name}_${fold}_1.fq.gz"
       fi
     fi
   done
@@ -552,11 +676,11 @@ if [[ "$files_found" == false ]]; then
 fi
 
 # Priority 3: Check for single files (simple format)
-# Pattern: ${sample}_1.fq.gz, ${sample}_2.fq.gz
+# Pattern: ${fastq_name}_1.fq.gz, ${fastq_name}_2.fq.gz
 if [[ "$files_found" == false ]]; then
-  fq1_files="${fastq_dir}/${sample}_1.fq.gz"
-  fq2_files="${fastq_dir}/${sample}_2.fq.gz"
-  sample_fq1="${fastq_dir}/${sample}_1.fq.gz"
+  fq1_files="${fastq_dir}/${fastq_name}_1.fq.gz"
+  fq2_files="${fastq_dir}/${fastq_name}_2.fq.gz"
+  sample_fq1="${fastq_dir}/${fastq_name}_1.fq.gz"
 
   # Validate single files exist
   if [[ -f "$fq1_files" && -f "$fq2_files" ]]; then
@@ -564,13 +688,37 @@ if [[ "$files_found" == false ]]; then
     echo "  R1 file: ${fq1_files}"
     echo "  R2 file: ${fq2_files}"
     files_found=true
-  else
-    echo "ERROR: No FASTQ files found for sample ${sample}"
-    echo "  Tried multi-lane format: ${fastq_dir}/${sample}_S*_L*_R1_*.fastq.gz"
-    echo "  Tried multi-fold format: ${fastq_dir}/${sample}_fold*_1.fq.gz"
-    echo "  Tried single file format: ${fastq_dir}/${sample}_1.fq.gz"
-    exit 1
   fi
+fi
+
+# Priority 4: Check for _R1/_R2 format (common alternative format)
+# Pattern: ${fastq_name}_R1.fq.gz, ${fastq_name}_R2.fq.gz
+if [[ "$files_found" == false ]]; then
+  fq1_files="${fastq_dir}/${fastq_name}_R1.fq.gz"
+  fq2_files="${fastq_dir}/${fastq_name}_R2.fq.gz"
+  sample_fq1="${fastq_dir}/${fastq_name}_R1.fq.gz"
+
+  # Validate single files exist
+  if [[ -f "$fq1_files" && -f "$fq2_files" ]]; then
+    echo "✓ Detected _R1/_R2 format sequencing data (1 file pair)"
+    echo "  R1 file: ${fq1_files}"
+    echo "  R2 file: ${fq2_files}"
+    files_found=true
+  fi
+fi
+
+# Final check: no files found
+if [[ "$files_found" == false ]]; then
+  echo "ERROR: No FASTQ files found for FASTQ name: ${fastq_name}"
+  echo "  Tried multi-lane format: ${fastq_dir}/${fastq_name}_S*_L*_R1_*.fastq.gz"
+  echo "  Tried multi-fold format: ${fastq_dir}/${fastq_name}_fold*_1.fq.gz"
+  echo "  Tried simple format: ${fastq_dir}/${fastq_name}_1.fq.gz"
+  echo "  Tried _R1/_R2 format: ${fastq_dir}/${fastq_name}_R1.fq.gz"
+  echo ""
+  echo "Please ensure FASTQ files exist in: ${fastq_dir}"
+  echo "Or specify custom FASTQ directory with --fastq_dir option"
+  echo "Or specify custom FASTQ name prefix with --fastq_name option"
+  exit 1
 fi
 
 # =========================

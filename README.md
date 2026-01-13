@@ -218,6 +218,37 @@ These parameters allow fine-tuning of performance and resolution:
 | `--cell_num` | Expected number of cells/spots | `50000` | 1000-200000 | Adjust based on tissue size |
 | `--pixelSize` | Pixel size in micrometers | `0.5` | 0.1-2.0 | Check your imaging system specs |
 
+### Path Customization (NEW in v1.7.0)
+
+For users with shared data environments or custom storage layouts, you can now specify custom paths for reference genomes, images, and FASTQ files:
+
+| Parameter | Description | Default | Use Case |
+|-----------|-------------|---------|----------|
+| `--reference_dir` | Custom reference genome directory | `$WORKSPACE/reference` | Shared reference across multiple projects |
+| `--mask_dir` | Custom mask/barcode directory | `$WORKSPACE/ST_mask` | Centralized barcode storage |
+| `--image_dir` | Custom image directory | `$WORKSPACE/images` | Separate image storage location |
+| `--fastq_dir` | Custom FASTQ directory | `$WORKSPACE/fastq/$chemistry` | Avoid duplicate data copies, use original sequencing location |
+| `--fastq_name` | Custom FASTQ filename prefix | `chip_number` | When FASTQ files have different names than chip numbers |
+
+**Benefits:**
+- ✅ **Avoid data duplication**: Point directly to original sequencing files
+- ✅ **Shared resources**: Multiple users can share reference genomes and images
+- ✅ **Flexible organization**: Adapt to existing storage infrastructure
+- ✅ **Storage savings**: No need to copy large files into workspace
+
+### FASTQ File Format Support (Enhanced in v1.7.0)
+
+The pipeline now supports **4 FASTQ naming formats** with automatic detection:
+
+| Priority | Format | Pattern | Example |
+|----------|--------|---------|---------|
+| 1 | Multi-lane (Recommended) | `{chip}_S*_L*_R1_*.fastq.gz` | `ST110001_A1_S1_L001_R1_001.fastq.gz`<br>`ST110001_A1_S1_L002_R1_001.fastq.gz` |
+| 2 | Multi-fold (Legacy) | `{chip}_fold{1-5}_1.fq.gz` | `ST110001_A1_fold1_1.fq.gz`<br>`ST110001_A1_fold2_1.fq.gz` |
+| 3 | Simple format | `{chip}_1.fq.gz` | `ST110001_A1_1.fq.gz`<br>`ST110001_A1_2.fq.gz` |
+| 4 | _R1/_R2 format ✨ **NEW** | `{chip}_R1.fq.gz` | `ST110001_A1_R1.fq.gz`<br>`ST110001_A1_R2.fq.gz` |
+
+**Note:** The pipeline automatically detects and uses the first available format.
+
 ### Usage Examples
 
 #### Example 1: Basic HE Mode (Most Common)
@@ -299,6 +330,46 @@ bash Celatlas.sh \
   --bin 50,100
 ```
 
+#### Example 9: Custom Directories for Shared Data Environment ✨ NEW
+```bash
+# Ideal for production environments with centralized storage
+bash Celatlas.sh \
+  --chip ST110001_A1 \
+  --casno shared_proj_001 \
+  --chemistry BBV2.4 \
+  --species Mus_musculus \
+  --method HE \
+  --mode strna \
+  --reference_dir /data/shared/reference \
+  --fastq_dir /data/sequencing/run001 \
+  --mask_dir /data/shared/masks \
+  --image_dir /data/shared/images
+```
+
+**Why use custom directories?**
+- Avoid copying 100+ GB FASTQ files
+- Share reference genomes across multiple projects
+- Use original sequencing output location directly
+
+#### Example 10: Custom FASTQ Name (Different from Chip Number) ✨ NEW
+```bash
+# When FASTQ files have different naming than chip numbers
+bash Celatlas.sh \
+  --chip ST110001_A1 \
+  --casno test_001 \
+  --chemistry BBV2.4 \
+  --species Mus_musculus \
+  --method HE \
+  --mode strna \
+  --fastq_name "Sample_ABC_XYZ"
+
+# Pipeline will look for:
+#   Sample_ABC_XYZ_S1_L001_R1_001.fastq.gz (multi-lane)
+#   Sample_ABC_XYZ_fold1_1.fq.gz (multi-fold)
+#   Sample_ABC_XYZ_1.fq.gz (simple)
+#   Sample_ABC_XYZ_R1.fq.gz (R1/R2 format)
+```
+
 ## Configuration
 
 ### Sample Naming Convention (IMPORTANT - Changed in v1.7.0)
@@ -327,7 +398,8 @@ The pipeline uses a **two-part naming system** to distinguish between sample ide
 |-----------|----------------|---------|-------|
 | **FASTQ (Multi-lane)** | `{chip}_S*_L*_R1_*.fastq.gz`<br>`{chip}_S*_L*_R2_*.fastq.gz` | `ST110001_A1_S1_L001_R1_001.fastq.gz`<br>`ST110001_A1_S1_L002_R1_001.fastq.gz` | ✅ **Recommended format**<br>Automatically detects all lanes |
 | **FASTQ (Multi-fold)** | `{chip}_fold1_1.fq.gz`<br>`{chip}_fold2_1.fq.gz` | `ST110001_A1_fold1_1.fq.gz`<br>`ST110001_A1_fold1_2.fq.gz` | Legacy format<br>Supports fold1-fold5 |
-| **FASTQ (Single file)** | `{chip}_1.fq.gz`<br>`{chip}_2.fq.gz` | `ST110001_A1_1.fq.gz`<br>`ST110001_A1_2.fq.gz` | Simple format |
+| **FASTQ (Simple)** | `{chip}_1.fq.gz`<br>`{chip}_2.fq.gz` | `ST110001_A1_1.fq.gz`<br>`ST110001_A1_2.fq.gz` | Simple format |
+| **FASTQ (_R1/_R2)** ✨ **NEW** | `{chip}_R1.fq.gz`<br>`{chip}_R2.fq.gz` | `ST110001_A1_R1.fq.gz`<br>`ST110001_A1_R2.fq.gz` | Common alternative format |
 | **HE Image** | `{chip}_he.(tif\|png\|jpg\|jpeg)` | `ST110001_A1_he.tif` | **Required for HE mode** |
 | **Tissue Image** | `{chip}.tif` | `ST110001_A1.tif` | Required for ssDNA mode |
 | **Barcode Position** | `{chip}.barcodeToPos.h5`<br>`{chip}_FilterBarcodes.csv`<br>`{chip}_tissue_bbox.csv` | `ST110001_A1.barcodeToPos.h5` | Required for spatial modes |
@@ -370,7 +442,16 @@ Priority 3: Single file format (Simple)
   ├── Pattern: {chip}_1.fq.gz
   ├── Example: ST110001_A1_1.fq.gz
   └── Single file pair
+
+Priority 4: _R1/_R2 format ✨ NEW
+  ├── Pattern: {chip}_R1.fq.gz / {chip}_R2.fq.gz
+  ├── Example: ST110001_A1_R1.fq.gz
+  │           ST110001_A1_R2.fq.gz
+  └── Common alternative naming convention
 ```
+
+**Custom FASTQ Directory & Name:**
+You can override the default FASTQ location and naming using `--fastq_dir` and `--fastq_name` parameters (see Example 9 and 10 above).
 
 #### Comparison with Previous Versions
 

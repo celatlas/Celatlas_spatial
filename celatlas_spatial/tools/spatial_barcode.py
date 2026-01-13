@@ -1303,7 +1303,7 @@ class Barcode(Step):
         if bool_whitelist:
             barcode_set_list, barcode_mismatch_list = self.parse_whitelist_file(whitelist_files,
                                                                                 n_pattern=n_pattern,
-                                                                                n_mismatch=1,
+                                                                                n_mismatch=self.mismatch,
                                                                                 mode=self.mode,
                                                                                 chemistry=chemistry)
         if bool_L:
