@@ -136,7 +136,7 @@ gunzip Homo_sapiens.GRCh38.110.gtf.gz
 celatlas_spatial rna mkref \
     --genome_name Homo_sapiens \
     --fasta reference/Homo_sapiens/Homo_sapiens.GRCh38.dna.primary_assembly.fa \
-    --genes reference/Homo_sapiens/Homo_sapiens.GRCh38.110.gtf \
+    --gtf reference/Homo_sapiens/Homo_sapiens.GRCh38.110.gtf \
     --thread 8
 ```
 
