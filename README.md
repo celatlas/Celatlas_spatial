@@ -118,7 +118,7 @@ mkdir -p reference/others
 
 **2. Download genome files (example for human):** 
 
-Note:​​ For detailed parameters and the latest guidelines, please refer to the official STAR documentation at https://github.com/alexdobin/STAR."
+Note: For detailed parameters and the latest guidelines, please refer to the official STAR documentation at https://github.com/alexdobin/STAR."
 
 ```bash
 cd reference/Homo_sapiens
@@ -166,7 +166,7 @@ Celatlas.sh <positional args...> --thread 32 --bin 10,50,100
 | `sample_name` | Sample identifier (optional in 6-param mode) | Any string | `DEMO` |
 | `chip_number` | Chip/slide number | Unique identifier | `ST110001_A1` |
 | `casno` | Case/project number for organizing results | Project ID | `HE_TEST` |
-| `chemistry` | Chemistry version of the kit | `BBV0`, `BBV2.4`, `BBV3.0` | `BBV2.4` |
+| `chemistry` | Chemistry version of the kit | `BBV0`, `BBV2.4`, `BBV3` | `BBV2.4` |
 | `species` | Target species for alignment | `Homo_sapiens`, `Mus_musculus`, `others` | `Mus_musculus` |
 | `method` | Analysis method **(see detailed explanation below)** | `HE`, `ssDNA`, `gene_expr` | `HE` |
 | `mode` | Pipeline mode | `strna`, `scrna` | `strna` |
@@ -245,7 +245,7 @@ The pipeline now supports **4 FASTQ naming formats** with automatic detection:
 | 1 | Multi-lane (Recommended) | `{chip}_S*_L*_R1_*.fastq.gz` | `ST110001_A1_S1_L001_R1_001.fastq.gz`<br>`ST110001_A1_S1_L002_R1_001.fastq.gz` |
 | 2 | Multi-fold (Legacy) | `{chip}_fold{1-5}_1.fq.gz` | `ST110001_A1_fold1_1.fq.gz`<br>`ST110001_A1_fold2_1.fq.gz` |
 | 3 | Simple format | `{chip}_1.fq.gz` | `ST110001_A1_1.fq.gz`<br>`ST110001_A1_2.fq.gz` |
-| 4 | _R1/_R2 format ✨ **NEW** | `{chip}_R1.fq.gz` | `ST110001_A1_R1.fq.gz`<br>`ST110001_A1_R2.fq.gz` |
+| 4 | _R1/_R2 format | `{chip}_R1.fq.gz` | `ST110001_A1_R1.fq.gz`<br>`ST110001_A1_R2.fq.gz` |
 
 **Note:** The pipeline automatically detects and uses the first available format.
 
@@ -312,7 +312,7 @@ bash Celatlas.sh DEMO ST110001_A1 custom_test BBV2.4 Homo_sapiens HE strna \
   --bin 10,20,50,100 \
   --insertR2 120 \
   --cell_num 80000 \
-  --pixelSize 0.715
+  --pixelSize 0.5
 ```
 
 #### Example 8: Pure Named Arguments (Good for Scripts)
@@ -327,7 +327,7 @@ bash Celatlas.sh \
   --method HE \
   --mode strna \
   --thread 32 \
-  --bin 50,100
+  --bin 50
 ```
 
 #### Example 9: Custom Directories for Shared Data Environment ✨ NEW
@@ -399,7 +399,7 @@ The pipeline uses a **two-part naming system** to distinguish between sample ide
 | **FASTQ (Multi-lane)** | `{chip}_S*_L*_R1_*.fastq.gz`<br>`{chip}_S*_L*_R2_*.fastq.gz` | `ST110001_A1_S1_L001_R1_001.fastq.gz`<br>`ST110001_A1_S1_L002_R1_001.fastq.gz` | ✅ **Recommended format**<br>Automatically detects all lanes |
 | **FASTQ (Multi-fold)** | `{chip}_fold1_1.fq.gz`<br>`{chip}_fold2_1.fq.gz` | `ST110001_A1_fold1_1.fq.gz`<br>`ST110001_A1_fold1_2.fq.gz` | Legacy format<br>Supports fold1-fold5 |
 | **FASTQ (Simple)** | `{chip}_1.fq.gz`<br>`{chip}_2.fq.gz` | `ST110001_A1_1.fq.gz`<br>`ST110001_A1_2.fq.gz` | Simple format |
-| **FASTQ (_R1/_R2)** ✨ **NEW** | `{chip}_R1.fq.gz`<br>`{chip}_R2.fq.gz` | `ST110001_A1_R1.fq.gz`<br>`ST110001_A1_R2.fq.gz` | Common alternative format |
+| **FASTQ (_R1/_R2)** | `{chip}_R1.fq.gz`<br>`{chip}_R2.fq.gz` | `ST110001_A1_R1.fq.gz`<br>`ST110001_A1_R2.fq.gz` | Common alternative format |
 | **HE Image** | `{chip}_he.(tif\|png\|jpg\|jpeg)` | `ST110001_A1_he.tif` | **Required for HE mode** |
 | **Tissue Image** | `{chip}.tif` | `ST110001_A1.tif` | Required for ssDNA mode |
 | **Barcode Position** | `{chip}.barcodeToPos.h5`<br>`{chip}_FilterBarcodes.csv`<br>`{chip}_tissue_bbox.csv` | `ST110001_A1.barcodeToPos.h5` | Required for spatial modes |
@@ -443,7 +443,7 @@ Priority 3: Single file format (Simple)
   ├── Example: ST110001_A1_1.fq.gz
   └── Single file pair
 
-Priority 4: _R1/_R2 format ✨ NEW
+Priority 4: _R1/_R2 format 
   ├── Pattern: {chip}_R1.fq.gz / {chip}_R2.fq.gz
   ├── Example: ST110001_A1_R1.fq.gz
   │           ST110001_A1_R2.fq.gz
