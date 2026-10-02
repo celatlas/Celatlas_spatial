@@ -1,0 +1,5 @@
+run_id,enabled,workflow,profile,sample_name,chip_number,casno,chemistry,species,method,mode,thread,bin,pixel_size,fastq_dir,fastq_name,mask_dir,image_dir,reference_dir,resume_existing,gene_mask_filter,enable_cavity_filter,cavity_apply,enable_stardist_cell_segment,no_clean,skip_binsegment,skip_analysis,skip_report,extra_args
+st_demo,1,ST,,test,ST110250_A1,prod_case,BBV2.4,Mus_musculus,gene_expr,strna,32,50,0.5,,,,,,1,0,0,0,0,,,,,
+sx_he_demo,1,SX,,test2,SX000258_B1,SX_case,BBV2.4,Homo_sapiens,HE,strna,32,"50,100",0.5,,,,,,1,0,1,1,1,,,,,--cavity-mask-preset adipose
+reanalysis_demo,0,reanalysis,,test3,ST110382_B1,ST_prod2026,BBV2.4,Homo_sapiens,ssDNA,strna,32,50,0.5,,,,,,0,1,0,0,0,0,0,0,0,
+sn_demo,0,SN,sn_sorghum,test4,SX000256_A1,SN_case,BBV2.4,Sorghum_bicolorv_geneid,gene_expr,strna,32,50,0.5,,,,,,0,0,0,0,0,,,,,

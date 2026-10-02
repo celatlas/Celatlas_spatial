@@ -1,0 +1,16 @@
+{
+  "for_image": {
+    "path": "/mnt/research/strna/images/huadong/705/705-44_1_最大值_Z_rgb_CH(CF-405)_CH4.tif",
+    "width": 27450,
+    "height": 30870,
+    "bytes": 2545607518
+  },
+  "calibration": {
+    "method": "scale_bar_two_points",
+    "points_source_px": [[23386.5, 28246], [26327.5, 28246]],
+    "length_um": 1000,
+    "distance_px": 2941,
+    "um_per_pixel": 0.34002040122407345,
+    "note": "图中右下角标注 1 mm；白色条带 x=23387..26327, y=28096..28396；端点取条带像素外边缘。预填标定，使用前需用户确认。"
+  }
+}

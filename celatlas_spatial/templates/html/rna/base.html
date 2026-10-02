@@ -1,0 +1,29 @@
+{% include "html/utils/start.html"%}
+
+    {% if star_summary is defined %}
+    {% set step_summary = star_summary %}
+    {% include "html/utils/step.html" %}
+    {% endif %}
+
+    {% if featureCounts_summary is defined%}
+    {% set step_summary = featureCounts_summary %}
+    {% include "html/utils/step.html" %}
+    {% endif %}
+
+    {% if count_summary is defined %}
+    {% set step_summary = count_summary %}
+    {% include "html/rna/count.html"%}
+    {% endif %}
+
+    {% if binSegment_summary is defined %}
+    {% set step_summary = binSegment_summary %}
+    {% include "html/rna/binsegment.html" %}
+    {% endif %}
+
+    {% if analysis_summary is defined %}
+    {% set step_summary = analysis_summary %}
+    {% include "html/rna/analysis.html"%}
+    {% endif %}
+
+{% include "html/utils/end.html"%}
+

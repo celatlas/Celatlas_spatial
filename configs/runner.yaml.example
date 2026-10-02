@@ -1,0 +1,51 @@
+# Example config for the Python runner.
+# Copy this file to configs/runner.yaml and edit local paths.
+
+paths:
+  workspace: /data/celatlas
+  results_root: /data/celatlas/results
+  fastq_root: /data/celatlas/fastq
+  mask_dir: /data/celatlas/ST_mask
+  image_dir: /data/celatlas/images
+  reference_dir: /data/celatlas/reference
+  sx_reference_dir: /data/celatlas/reference/Homo_sapiens_wtpanel
+  src_dir: /data/celatlas/src
+
+defaults:
+  default_thread: 32
+  # STAR coordinate sorting can create many temporary BAMsort files when
+  # runThreadN is high. Keep STAR lower while allowing other steps to use more
+  # threads.
+  default_star_thread: 12
+  default_bin: 50
+  default_pixel_size: 0.5
+  gem_bin_size: 20
+  umi_min_threshold: 30
+  registration_type: affine
+
+sx:
+  # Python engine only. SX featureCounts defaults to min(thread, 8)
+  # unless this is set per config/CSV.
+  featurecounts_thread: 8
+
+env:
+  CELATLAS_ENV_NAME: celatlas18
+  CELATLAS_AUTO_ACTIVATE: "1"
+  CELATLAS_USE_ENV_PATH: "1"
+
+sn:
+  sn_barcode_lownum: 1
+  sn_cutadapt_min_length: 15
+  sn_cutadapt_nextseq_trim: 20
+  sn_cutadapt_overlap: 10
+  sn_cutadapt_param: "-a T{15} -g T{15}"
+  sn_star_multimap: 10
+  sn_strna_star_match_min: 20
+  sn_strna_star_match_ratio: 0.2
+  sn_strna_star_score_ratio: 0.2
+  sn_scrna_star_match_min: 15
+  sn_scrna_star_match_ratio: 0.15
+  sn_scrna_star_score_ratio: 0.15
+  sn_feature_type: gene
+  sn_featurecounts_param: "-s 2"
+  sn_resolve_multigene_umi: "0"

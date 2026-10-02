@@ -1,0 +1,19 @@
+{
+  "for_image": {
+    "path": "/mnt/research/strna/images/huadong/太大了分开压缩605-dapi/605-36_2_最大值_Z_rgb_CH(CF-405)_CH4.tif",
+    "width": 27450,
+    "height": 32580,
+    "bytes": 2687908534
+  },
+  "calibration": {
+    "method": "scale_bar_two_points",
+    "points_source_px": [
+      [23244.5, 29811.5],
+      [26185.5, 29811.5]
+    ],
+    "length_um": 1000,
+    "distance_px": 2941,
+    "um_per_pixel": 0.34002040122407345,
+    "note": "605 DAPI 图右下角标注 1 mm；白色条带 x=23245..26185, y=29653..29970；端点取条带像素外边缘。仅用于此路径、画布和文件大小匹配的原图，使用前需用户确认。"
+  }
+}

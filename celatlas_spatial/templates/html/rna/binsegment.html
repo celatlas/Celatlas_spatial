@@ -1,0 +1,20 @@
+<div class="abc" style="float: left; margin-left: 15%; margin-right:15%; width: 70%">
+    <h2>{{ step_summary.display_title }} <i class="icon-help-circled" onClick="toggle1(this.parentNode.parentNode)" style="cursor:pointer;"></i></h2>
+    <div class="box">
+        {% include "html/utils/help_info.html" %}
+        {% include "html/utils/col1_metrics.html" %}
+
+        {% if step_summary.table_plot and step_summary.table_plot.html %}
+        <div class="bg-white shadow-md rounded p-4 w-full">
+            <h2 class="text-2xl font-semibold mb-4">Bin Size Statistics</h2>
+            <div class="overflow-x-auto w-full">
+                <div class="w-full" style="min-width: 100%;">
+                    {{ step_summary.table_plot.html | safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="clear"></div>
+    </div>
+</div>

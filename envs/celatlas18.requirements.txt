@@ -1,0 +1,21 @@
+# Celatlas Spatial v1.8.0 validated pip dependency manifest.
+#
+# Source environment: the validated `celatlas18` Conda environment.
+#
+# Core validated versions:
+#   Python 3.11.15
+#   Celatlas Spatial 1.8.0
+#   numpy 2.0.2
+#   pandas 2.3.3
+#   scanpy 1.10.3
+#   stardist 0.9.2
+#   tensorflow 2.21.0
+#   csbdeep 0.8.2
+#   pytorch 2.11.0
+#   torchvision 0.26.0
+#   SimpleITK 2.5.5
+#
+# Install from the repository root with:
+#   pip install -r envs/celatlas18.requirements.txt
+
+-r ../requirements.txt

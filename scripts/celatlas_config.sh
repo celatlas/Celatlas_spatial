@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+
+# Portable configuration loader for Celatlas shell entrypoints.
+# Source this file; do not execute it directly.
+
+celatlas_config_find_file() {
+  if [[ -n "${CELATLAS_CONFIG:-}" ]]; then
+    printf '%s\n' "$CELATLAS_CONFIG"
+    return 0
+  fi
+
+  local repo_dir="${CELATLAS_REPO_DIR:-$(pwd)}"
+  local candidates=(
+    "${repo_dir}/celatlas.local.env"
+    "${repo_dir}/configs/celatlas.env"
+    "${HOME}/.config/celatlas_spatial/celatlas.env"
+  )
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    if [[ -f "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+celatlas_config_set_defaults() {
+  CELATLAS_WORKSPACE="${CELATLAS_WORKSPACE:-${HOME}/celatlas_spatial}"
+  CELATLAS_REFERENCE_DIR="${CELATLAS_REFERENCE_DIR:-${CELATLAS_WORKSPACE}/reference}"
+  CELATLAS_FFPE_REFERENCE_DIR="${CELATLAS_FFPE_REFERENCE_DIR:-${CELATLAS_REFERENCE_DIR}/Homo_sapiens_wtpanel}"
+  CELATLAS_MASK_DIR="${CELATLAS_MASK_DIR:-${CELATLAS_WORKSPACE}/ST_mask}"
+  CELATLAS_IMAGE_DIR="${CELATLAS_IMAGE_DIR:-${CELATLAS_WORKSPACE}/images}"
+  CELATLAS_FASTQ_ROOT="${CELATLAS_FASTQ_ROOT:-${CELATLAS_WORKSPACE}/fastq}"
+  CELATLAS_RESULTS_ROOT="${CELATLAS_RESULTS_ROOT:-${CELATLAS_WORKSPACE}/results}"
+  CELATLAS_SRC_DIR="${CELATLAS_SRC_DIR:-${CELATLAS_WORKSPACE}/src}"
+  CELATLAS_BINSEGMENT_ROOT="${CELATLAS_BINSEGMENT_ROOT:-${CELATLAS_WORKSPACE}/binSegment}"
+
+  CELATLAS_CONDA_ROOT="${CELATLAS_CONDA_ROOT:-}"
+  CELATLAS_ENV_NAME="${CELATLAS_ENV_NAME:-celatlas18}"
+  CELATLAS_ENV_PREFIX="${CELATLAS_ENV_PREFIX:-}"
+  CELATLAS_STAR_MULTIMAP="${CELATLAS_STAR_MULTIMAP:-}"
+  CELATLAS_STARDIST_MODEL_DIR="${CELATLAS_STARDIST_MODEL_DIR:-}"
+  CELATLAS_SPATIAL_REPORT_GENERATOR="${CELATLAS_SPATIAL_REPORT_GENERATOR:-}"
+  CELATLAS_SCRNA_REPORT_GENERATOR="${CELATLAS_SCRNA_REPORT_GENERATOR:-}"
+
+  if [[ -n "$CELATLAS_STARDIST_MODEL_DIR" && -z "${STARDIST_MODEL_DIR:-}" ]]; then
+    export STARDIST_MODEL_DIR="$CELATLAS_STARDIST_MODEL_DIR"
+  fi
+
+  export CELATLAS_WORKSPACE CELATLAS_REFERENCE_DIR CELATLAS_FFPE_REFERENCE_DIR
+  export CELATLAS_MASK_DIR CELATLAS_IMAGE_DIR
+  export CELATLAS_FASTQ_ROOT CELATLAS_RESULTS_ROOT
+  export CELATLAS_SRC_DIR CELATLAS_BINSEGMENT_ROOT
+  export CELATLAS_CONDA_ROOT CELATLAS_ENV_NAME CELATLAS_ENV_PREFIX
+  export CELATLAS_STAR_MULTIMAP
+  export CELATLAS_STARDIST_MODEL_DIR CELATLAS_SPATIAL_REPORT_GENERATOR CELATLAS_SCRNA_REPORT_GENERATOR
+}
+
+celatlas_config_load() {
+  if [[ "${CELATLAS_CONFIG_LOADED:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  local config_file=""
+  if config_file="$(celatlas_config_find_file 2>/dev/null)"; then
+    if [[ ! -f "$config_file" ]]; then
+      echo "ERROR: CELATLAS_CONFIG points to a missing file: $config_file"
+      exit 1
+    fi
+    # shellcheck source=/dev/null
+    source "$config_file"
+    CELATLAS_CONFIG_FILE="$config_file"
+  else
+    CELATLAS_CONFIG_FILE=""
+  fi
+
+  CELATLAS_CONFIG_LOADED=1
+  export CELATLAS_CONFIG_LOADED CELATLAS_CONFIG_FILE
+  celatlas_config_set_defaults
+}
+
+celatlas_config_summary() {
+  cat <<EOF
+CELATLAS_CONFIG_FILE=${CELATLAS_CONFIG_FILE:-}
+CELATLAS_WORKSPACE=${CELATLAS_WORKSPACE:-}
+CELATLAS_REFERENCE_DIR=${CELATLAS_REFERENCE_DIR:-}
+CELATLAS_FFPE_REFERENCE_DIR=${CELATLAS_FFPE_REFERENCE_DIR:-}
+CELATLAS_MASK_DIR=${CELATLAS_MASK_DIR:-}
+CELATLAS_IMAGE_DIR=${CELATLAS_IMAGE_DIR:-}
+CELATLAS_FASTQ_ROOT=${CELATLAS_FASTQ_ROOT:-}
+CELATLAS_RESULTS_ROOT=${CELATLAS_RESULTS_ROOT:-}
+CELATLAS_SRC_DIR=${CELATLAS_SRC_DIR:-}
+CELATLAS_BINSEGMENT_ROOT=${CELATLAS_BINSEGMENT_ROOT:-}
+CELATLAS_ENV_NAME=${CELATLAS_ENV_NAME:-}
+CELATLAS_ENV_PREFIX=${CELATLAS_ENV_PREFIX:-}
+CELATLAS_STAR_MULTIMAP=${CELATLAS_STAR_MULTIMAP:-}
+CELATLAS_STARDIST_MODEL_DIR=${CELATLAS_STARDIST_MODEL_DIR:-}
+EOF
+}

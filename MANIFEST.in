@@ -1,0 +1,49 @@
+include README.md
+include requirements.txt
+include conda_pkgs.txt
+include Celatlas.sh
+include Celatlas_FFPE.sh
+include Celatlas_SN.sh
+include Celatlas_reanalysis.sh
+include Celatlas_run.sh
+include configs/runner.yaml.example
+include configs/celatlas.env.example
+include configs/jobs/example.batch.csv
+include configs/jobs/example.strna.env
+recursive-include deploy/release *
+include docs/celatlas_spatial_manual_zh.md
+include docs/celatlas_spatial_manual_en.md
+include docs/linux_deployment_guide.md
+recursive-include envs *
+include scripts/README.md
+include scripts/background_swap/*.py
+include scripts/background_swap/requirements.txt
+include scripts/roi_cropper/*.py
+include scripts/roi_cropper/*.json
+include scripts/analyze_sequencing_saturation.py
+include scripts/celatlas_config.sh
+include scripts/celatlas_config_run.sh
+include scripts/celatlas_env.sh
+include scripts/celatlas_failure_report.sh
+include scripts/celatlas_post_binsegment.sh
+include scripts/celatlas_runtime_paths.sh
+include scripts/check_public_release.py
+include scripts/create_fastq_demo.py
+include scripts/normalize_gff3_to_gtf.py
+include scripts/package_release_bundle.sh
+include scripts/plot_umi_amplification_distribution.py
+exclude scripts/background_swap/*.md
+exclude scripts/roi_cropper/*.md
+recursive-include celatlas_spatial/configs *
+recursive-include celatlas_spatial/templates *
+recursive-include celatlas_spatial/data *
+prune celatlas_spatial/templates/.claude
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.egg-info/*
+global-exclude *.backup
+global-exclude *~
+prune private
+prune tests
+include demo_data/README.md
+recursive-include demo_data/fastq *.fq.gz *.manifest.json

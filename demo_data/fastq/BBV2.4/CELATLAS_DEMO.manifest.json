@@ -1,0 +1,25 @@
+{
+  "format": "Celatlas FASTQ demo manifest",
+  "tool": "scripts/create_fastq_demo.py",
+  "tool_version": "1.0",
+  "sample": "CELATLAS_DEMO",
+  "read_pairs": 20000,
+  "read_length": "variable; copied from input",
+  "paired": true,
+  "headers_deidentified": true,
+  "sequence_mode": "synthetic",
+  "biological_sequences_retained": false,
+  "source_paths_recorded": false,
+  "files": {
+    "r1": {
+      "name": "CELATLAS_DEMO_1.fq.gz",
+      "sha256": "b8e1699a5832a4d49a82c1d00035cb47f3a0d12b434c0670ca805e498b4d6430",
+      "bytes": 1038977
+    },
+    "r2": {
+      "name": "CELATLAS_DEMO_2.fq.gz",
+      "sha256": "c52b4ea215524d1b5fba876d03cfe2ab941e37abefdc249daa0d3c9d786b4c10",
+      "bytes": 1038732
+    }
+  }
+}

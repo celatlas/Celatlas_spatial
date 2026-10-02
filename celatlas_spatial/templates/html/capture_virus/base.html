@@ -1,0 +1,34 @@
+{% include "html/utils/start.html"%}
+
+    {% if consensus_summary is defined %}
+    {% set step_summary = consensus_summary %}
+    {% include "html/utils/step.html"%}
+    {% endif %}
+
+    {% if star_virus_summary is defined %}
+    {% set step_summary = star_virus_summary %}
+    {% include "html/utils/step.html"%}
+    {% endif %}
+
+    {% if count_virus_summary is defined %}
+    {% set step_summary = count_virus_summary %}
+    {% include "html/utils/step.html"%}
+    {% endif %}
+
+    {% if filter_virus_summary is defined %}
+    {% set step_summary = filter_virus_summary %}
+    {% include "html/utils/step.html"%}
+    {% endif %}
+
+    {% if analysis_virus_summary is defined %}
+    {% set step_summary = analysis_virus_summary %}
+    {% include "html/capture_virus/analysis_virus.html"%}
+    {% endif %}
+
+    {% if featureCounts_summary is defined %}
+    {% set step_summary = featureCounts_summary %}
+    {% include "html/utils/step.html"%}
+    {% endif %}
+
+
+{% include "html/utils/end.html"%}
