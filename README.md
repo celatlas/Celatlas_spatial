@@ -1,50 +1,57 @@
-# Celatlas Spatial v1.8.0
+# Celatlas Spatial
 
-[![Version](https://img.shields.io/badge/version-1.8.0-1f883d.svg)](https://github.com/celatlas/Celatlas_spatial/releases/tag/v1.8.0)
-[![License](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE.txt)
-[![Platform](https://img.shields.io/badge/platform-Linux%20x86__64-555.svg)](#installation-and-deployment)
+Spatial transcriptomics analysis from sequencing reads to expression matrices, spatial maps, and HTML reports.
 
-Celatlas Spatial is a Linux pipeline for spatial transcriptomics and related RNA workflows. It turns FASTQ files, spatial coordinates, and optional HE or ssDNA images into reproducible count matrices, spatial bins, cell-level results, and HTML reports.
+**v1.8.0** is the current development and source release on this branch. It adds a unified command-line interface, ST/SX/SN workflow selection, input checks and resumable runs, reanalysis from existing count outputs, and optional StarDist cell segmentation. The [v1.7.0 branch](https://github.com/celatlas/Celatlas_spatial/tree/v1.7.0) remains available for users of the previous workflow.
 
-**v1.8.0 is a major standalone update.** It keeps the v1.7-compatible shell entry points while adding the unified `celatlas` CLI, ST/SX/SN workflows, preflight checks, resumable execution, reanalysis and report-only modes, StarDist cell segmentation, and cell-level analysis. The v1.8 source is on the `v1.8.0` branch, and the deployment bundle is published in [GitHub Releases](https://github.com/celatlas/Celatlas_spatial/releases/tag/v1.8.0).
+> **Download status:** The [v1.8.0 GitHub Release](https://github.com/celatlas/Celatlas_spatial/releases/tag/v1.8.0) currently contains GitHub-generated source archives only. The Linux deployment bundle `celatlas-spatial-v1.8.0-linux-x86_64.tar.gz` has not yet been attached. The source archives do not include the bundled models or installer layout described below.
+
+## What Celatlas Spatial does
+
+The pipeline processes FASTQ files with the appropriate barcode layout, reference index, spatial coordinates, and optional tissue images. Depending on the run mode, it produces gene-count matrices, spatial bins, image-registration results, clustering and marker analyses, and an HTML report. Cell segmentation is optional and requires a compatible image and StarDist model.
+
+| Mode | Typical input | Main result |
+|---|---|---|
+| `strna` | Spatial barcodes and, optionally, HE or ssDNA images | Spatial bin matrices and maps |
+| `scrna` | Barcode-based RNA data | Cell expression matrix and analysis |
+| `reanalyze` | Existing Celatlas count outputs | Updated downstream analysis without repeating alignment |
+| `mkreport` | Existing Celatlas analysis outputs | Refreshed HTML report |
+
+`ST`, `SX`, and `SN` select the library workflow. `SN` refers to the random-primer library design; choose it from the experimental protocol.
 
 ## What's new in v1.8.0
 
-- **Unified public CLI:** `celatlas count`, `celatlas reanalyze`, and `celatlas mkreport`, with `celatlas_spatial` retained as an advanced entry point.
-- **Three workflows:** ST, SX, and SN library designs, with `strna` and `scrna` analysis modes.
-- **Image-aware processing:** gene expression, ssDNA, and HE inputs with tissue segmentation, HE registration, spatial binning, and interactive reports.
-- **Cell-level analysis:** optional StarDist HE/fluorescence segmentation with cell matrices, AnnData, spatial coordinates, QC, clustering, and marker results.
-- **Reproducible execution:** FASTQ layout preflight, execution plans, step-level control, failure reports, resume support, and reanalysis from existing count outputs.
-- **Deployment bundle:** Conda environment definitions, Linux install and verification scripts, bilingual manuals, and de-identified synthetic FASTQ smoke-test data.
+- A public `celatlas` command with `count`, `reanalyze`, and `mkreport` subcommands.
+- A Python runner for explicit input preflight, dry-run plans, step-level execution, logs, and resume decisions.
+- Optional StarDist segmentation for supported HE or fluorescence images, with cell-level matrices, AnnData outputs, QC, clustering, and marker analysis.
+- Updated output organization and report generation, plus English and Chinese user manuals.
+- Compatibility shell entry points for migration from v1.7.
 
-## Quick start
+## Getting started
 
-### 1. Download the release bundle
-
-Download the Linux bundle from the [v1.8.0 Release](https://github.com/celatlas/Celatlas_spatial/releases/tag/v1.8.0):
-
-```text
-celatlas-spatial-v1.8.0-linux-x86_64.tar.gz
-```
+The supported deployment path uses the Linux x86_64 bundle. Once it is attached to the [v1.8.0 Release](https://github.com/celatlas/Celatlas_spatial/releases/tag/v1.8.0), download it and run:
 
 ```bash
 tar -xzf celatlas-spatial-v1.8.0-linux-x86_64.tar.gz
 cd celatlas-spatial-v1.8.0-linux-x86_64
+sha256sum -c CHECKSUMS.sha256
 ./release/install.sh
 conda activate celatlas18
 ./release/verify.sh
 ```
 
-The installer sets up the software and Python/Conda dependencies. FASTQ files, barcode and mask inputs, reference indexes, and project data must be prepared separately as described in the deployment guide.
+Conda or Miniforge must be available before installation. The bundle provides the software, environment definition, documentation, and selected models. You must supply project FASTQs, barcode/mask files, images, and validated STAR reference indexes separately. See the [Linux deployment guide](docs/linux_deployment_guide.md) for server setup and model paths.
 
-### 2. Plan and validate the inputs
+### Plan a new run
+
+This example prints the planned steps and checks input paths. Replace the sample IDs and `/data/...` paths with your own values:
 
 ```bash
 celatlas count \
   --id SX000293_A1 \
   --sample-name Human_FFPE_001 \
   --tissue lung \
-  --targetdir /data/celatlas/results/SXV1.1test/SX000293_A1 \
+  --targetdir /data/celatlas/results/project_001/SX000293_A1 \
   --chemistry BBV2.4 \
   --species Homo_sapiens \
   --workflow SX \
@@ -55,60 +62,37 @@ celatlas count \
   --dry-run
 ```
 
-Remove `--dry-run` after the plan and input checks pass. Add `--enable-cell-segmentation` when cell segmentation is needed. See the deployment guide for image, model, and GPU requirements.
+When the plan and required inputs are correct, remove `--dry-run` to run the pipeline. Add `--enable-cell-segmentation` only when the appropriate image and model are available. For a shorter installation smoke test, use the synthetic FASTQ data included in the Linux bundle as described in the [user manual](docs/celatlas_spatial_manual_en.md).
 
-### 3. Reuse existing results
+### Reanalyze or regenerate a report
+
+`reanalyze` and `mkreport` both require the sample metadata arguments, even when the output directory already exists. Use the same values as the original run and change only the subcommand:
 
 ```bash
-# Re-run downstream analysis from existing count outputs
-celatlas reanalyze --targetdir /data/celatlas/results/SXV1.1test/SX000293_A1
-
-# Regenerate only the HTML report
-celatlas mkreport --targetdir /data/celatlas/results/SXV1.1test/SX000293_A1
+celatlas reanalyze \
+  --id SX000293_A1 \
+  --sample-name Human_FFPE_001 \
+  --tissue lung \
+  --targetdir /data/celatlas/results/project_001/SX000293_A1 \
+  --chemistry BBV2.4 \
+  --species Homo_sapiens \
+  --workflow SX \
+  --image HE \
+  --mode strna
 ```
 
-## Entry points
+Use `celatlas mkreport` with those same arguments to regenerate only the report. Run `celatlas <subcommand> --help` for the full option list.
 
-| Entry point | Purpose |
-|---|---|
-| `celatlas count` | New sample: FASTQ to count, analysis, and report |
-| `celatlas reanalyze` | Run downstream analysis from existing count outputs |
-| `celatlas mkreport` | Generate or refresh an HTML report |
-| `celatlas_spatial run` | Config-file/CSV batch processing and step-level control |
-| `Celatlas.sh`, `Celatlas_FFPE.sh`, `Celatlas_SN.sh`, `Celatlas_reanalysis.sh` | Compatible shell entry points |
-
-## Outputs
-
-The standard spatial workflow produces QC metrics, tissue and image-registration outputs, square-bin matrices at selected resolutions, UMAP/clustering/marker results, and an interactive HTML report. With cell segmentation enabled, it also produces:
-
-- `cell_matrix/`: 10X-compatible cell-level matrix
-- `*_cell_adata.h5ad`: AnnData object
-- `*_cell_positions.tsv` and `*_cell_metadata.tsv`: cell coordinates and QC metadata
-- Cell boundaries and overlays, cell-level QC, clustering, spatial plots, and markers
-
-Do not commit project data, reference indexes, or analysis results to the source repository.
-
-## Installation and deployment
+## Documentation
 
 - [English user manual](docs/celatlas_spatial_manual_en.md)
 - [Chinese user manual](docs/celatlas_spatial_manual_zh.md)
 - [Linux deployment guide](docs/linux_deployment_guide.md)
 - [Conda environment definition](envs/celatlas18.yml)
-- [Pip dependency manifest](envs/celatlas18.requirements.txt)
 - [Release notes](RELEASE_NOTES.md)
 
-Minimum requirements are Linux x86_64, Python 3.11, and a working Conda or Miniforge installation. Complete workflows also require STAR, featureCounts, samtools, and cutadapt. HE and cell-segmentation workflows require the corresponding images, models, and computing resources.
+The source tree can also be built as a Python wheel and source archive with `python -m build`. Building from source still requires external command-line tools, models, reference indexes, and runtime data for a complete analysis.
 
-## Release files
+## License and support
 
-The source repository contains versioned code, documentation, and small examples. The Linux deployment bundle, models, and checksums are distributed as Release assets:
-
-```text
-celatlas-spatial-v1.8.0-linux-x86_64.tar.gz
-```
-
-After downloading, read `RELEASE_NOTES.md` and `release/MISSING_RUNTIME_ASSETS.md`, and keep the `CHECKSUMS.sha256` file for verification.
-
-## License and feedback
-
-This project is distributed under the [MIT License](LICENSE.txt). Please submit issues, feature requests, and installation feedback through [GitHub Issues](https://github.com/celatlas/Celatlas_spatial/issues).
+Celatlas Spatial is released under the [MIT License](LICENSE.txt). Please report installation problems and bugs through [GitHub Issues](https://github.com/celatlas/Celatlas_spatial/issues).
